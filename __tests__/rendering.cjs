@@ -22,7 +22,10 @@ test("JSON library", { timeout: 30000 }, async (t) => {
   // Load authored files directly; CDN availability is not part of this contract.
   await page.route("**/*", (route) => route.abort());
   // ===== BROWSER FIXTURE =====
-  await page.setContent('<!doctype html><meta charset="UTF-8"><div id="viewer"></div>');
+  await page.setContent(
+    /* HTML */ `<!doctype html><meta charset="UTF-8" />
+      <div id="viewer"></div>`
+  );
   await page.addStyleTag({ path: path.join(__dirname, "../json.css") });
   await page.addScriptTag({ path: path.join(__dirname, "../json.js") });
   await page.evaluate(() => {
@@ -59,7 +62,7 @@ test("JSON library", { timeout: 30000 }, async (t) => {
   await t.test("keeps untrusted markup and executable URLs inert", async () => {
     await page.evaluate(() =>
       byJSONviewer(root, {
-        html: '<img src=x onerror="window.injected=1">',
+        html: /* HTML */ `<img src="x" onerror="window.injected=1" />`,
         url: "javascript:alert(1)"
       })
     );
