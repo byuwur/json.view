@@ -673,6 +673,7 @@
     const token = renderTokens.get(element);
     if (!token) return;
     token.cancel = true;
+    token.request?.abort();
     token.finish?.(false);
     cancelAnimationFrame(token.motionFrame);
     token.timers.forEach((timer) => clearTimeout(timer));
@@ -699,6 +700,17 @@
   };
 
   // ===== PUBLIC API =====
+  const sourceURL = (input, options) => {
+    if (options?.sourceType === "text") return;
+    if (typeof input === "string") return /^(?:https?:\/\/|\.{1,2}\/|\/(?![/*]))[^\s]+$/i.test(input) ? input : undefined;
+    if (input && Object.hasOwn(input, "url") && typeof input.url === "string" && Object.keys(input).length === 1) return input.url.trim() || undefined;
+  };
+  const fetchSource = async (url, signal) => {
+    const response = await fetch(url, { signal });
+    if (!response.ok) throw new Error(`Unable to load source: HTTP ${response.status}.`);
+    return response.text();
+  };
+
   /**
    * Replace a target with a chunked JSON tree. Returns immediately; descendants finish on timers.
    * The caller retains the value; Copy serializes that value rather than the displayed DOM.
@@ -767,6 +779,8 @@
     panel.append(status, content);
     body.appendChild(panel);
     element.appendChild(body);
+    const url = sourceURL(json, options);
+    let loaded = !url;
     let ready;
     const renderTree = () => {
       if (!token.finish) {
@@ -804,7 +818,26 @@
       if (rootToggle && normalizedOptions.collapsed) setToggleState(rootToggle, true);
       if (!token.timers.size) token.finish(true);
     };
-    renderTree();
+    if (url) {
+      token.request = new AbortController();
+      status.textContent = "Loading source...";
+      ready = fetchSource(url, token.request.signal)
+        .then((text) => {
+          if (token.cancel) return false;
+          json = JSON.parse(text);
+          loaded = true;
+          renderTree();
+          return ready;
+        })
+        .catch((error) => {
+          if (!token.cancel) {
+            status.setAttribute("role", "alert");
+            status.hidden = false;
+            status.textContent = error.message;
+          }
+          return false;
+        });
+    } else renderTree();
     const getText = () => JSON.stringify(json, (_, value) => (typeof value === "bigint" || isBigNumber(value, normalizedOptions) ? value.toString() : value), 2) ?? "null";
     const updateControls = mountControls(element, content, normalizedOptions, getText, byJSONviewer.VERSION, "Copy JSON");
     return {
@@ -821,6 +854,7 @@
         Object.assign(normalizedOptions, next);
         element.classList.toggle("byVIEWplain", !next.displayContainer);
         element.classList.toggle("byJSONmonospace", next.forceMonospace);
+        if (!loaded) return ready;
         status.hidden = !next.statusBar;
         if (redraw) {
           token.timers.forEach(clearTimeout);

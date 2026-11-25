@@ -116,5 +116,35 @@ test("JSON library", { timeout: 30000 }, async (t) => {
     assert.equal(await page.locator("#viewer li").textContent(), '"current"');
   });
 
+  await t.test("loads a source URL through the public API", async () => {
+    const url = "https://files.test/sample";
+    await page.route(url, (route) =>
+      route.fulfill({
+        contentType: "text/plain",
+        headers: { "Access-Control-Allow-Origin": "*" },
+        body: '{"fromFile":42}'
+      })
+    );
+    const displayed = await page.evaluate(async (url) => {
+      const viewer = byJSONviewer(root, url);
+      return (await viewer.ready) && root.textContent;
+    }, url);
+    assert.match(displayed, /fromFile/);
+    assert.match(displayed, /42/);
+  });
+
+  await t.test("retains URL records as data and reports invalid remote JSON", async () => {
+    await page.evaluate(() => byJSONviewer(root, { url: "./metadata" }, { sourceType: "text" }).ready);
+    assert.match(await page.locator(".byJSONcontent").textContent(), /metadata/);
+    await page.route("https://files.test/broken.json", (route) =>
+      route.fulfill({
+        headers: { "Access-Control-Allow-Origin": "*" },
+        body: "{"
+      })
+    );
+    assert.equal(await page.evaluate(() => byJSONviewer(root, { url: "https://files.test/broken.json" }).ready), false);
+    assert.ok(await page.getByRole("alert").textContent());
+  });
+
   assert.deepEqual(errors, [], "No uncaught browser errors");
 });

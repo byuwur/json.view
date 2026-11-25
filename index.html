@@ -1180,7 +1180,7 @@
           }
           markPending();
           const started = performance.now();
-          viewer = frame.contentWindow.byJSONviewer(renderer, state.data, { ...state.options, ...appearance });
+          viewer = frame.contentWindow.byJSONviewer(renderer, state.data, { ...state.options, ...appearance, sourceType: "text" });
           measureRender(viewer.ready, started, completed);
         }
 

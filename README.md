@@ -52,9 +52,18 @@ Open [index.html](index.html) locally. Its host assets use the network. Exported
 
 ## API and options
 
-Pass a JavaScript value: object, array, string, number, boolean, `null`, `bigint`, or a compatible big-number object. Parse JSON text with `JSON.parse()` first.
+Pass a JavaScript value: object, array, string, number, boolean, `null`, `bigint`, or a compatible big-number object. Parse inline JSON text with `JSON.parse()` first. URL inputs are parsed after loading.
 
 `byJSONviewer(element, value, options?)` returns a controller with `ready` and `setOptions(changes)`. Await `ready` for the current render. It resolves to `true` on completion or `false` if the render is replaced. An invalid target throws `TypeError`.
+
+A source string beginning with `https://`, `http://`, `/`, `./`, or `../` and containing no whitespace loads a file. Use `{ url: "example.json" }` for a bare filename. To display a URL string or a single-property `{ url }` record as data, pass `{ sourceType: "text" }` in the options.
+
+```javascript
+const viewer = byJSONviewer(target, "./example.json");
+await viewer.ready;
+```
+
+The file is parsed as JSON. Relative URLs resolve against the page. Cross-origin files require CORS. A failed or superseded load resolves `ready` to `false`.
 
 Use acyclic, JSON-shaped data. Only own enumerable object properties are shown; functions, symbols, and `undefined` display as `null`. Non-finite numbers also display as `null`. Dates, Maps, Sets, and custom class instances have no special rendering support. Keep the supplied value stable while its chunks render; the viewer does not clone it.
 
