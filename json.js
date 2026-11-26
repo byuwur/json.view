@@ -11,7 +11,7 @@
   if (global.byJSONviewer?.initialized) return;
 
   // ===== METADATA =====
-  byJSONviewer.VERSION = "4.4"; // 2026-11-25
+  byJSONviewer.VERSION = "4.5"; // 2026-11-26
   // Mirrored helpers are checked by code.view/.github/scripts/check-family.mjs.
   const componentName = "JSON.view";
   const themeFile = "json";
